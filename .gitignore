@@ -3,6 +3,9 @@ __pycache__/
 .venv/
 .vscode/
 .idea/
+*.egg-info/
+build/
+dist/
 
 runs/
 tmp_train/

@@ -1,5 +1,6 @@
 from __future__ import annotations
 import os
+import sys
 import numpy as np
 import gymnasium as gym
 
@@ -33,12 +34,19 @@ class SineEnv(gym.Env):
 
         self.reset()
 
+    def _should_render(self) -> bool:
+        return self.render_mode in ("human", "rgb_array")
+
     def _ensure_pygame(self) -> None:
         if self._pygame_inited:
             return
 
-        # Headless safe (e.g. remote linux). Only matters if render is enabled.
-        if os.environ.get("DISPLAY", "") == "":
+        # Only force the dummy driver for headless Linux sessions.
+        if (
+            sys.platform.startswith("linux")
+            and os.environ.get("DISPLAY", "") == ""
+            and os.environ.get("WAYLAND_DISPLAY", "") == ""
+        ):
             os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
         import pygame
@@ -74,8 +82,9 @@ class SineEnv(gym.Env):
         self.y_pred = np.random.uniform(-150, 150)
         self.prev_y_true = self.y_pred
 
-        if (not self.training) and (self.render_mode in ("human", "rgb_array")):
+        if self._should_render():
             self._ensure_pygame()
+            self._clear()
 
         obs = np.array([self.time, 0.0, 0.0, self.frequency], dtype=np.float32)
         return obs, {}
@@ -101,7 +110,7 @@ class SineEnv(gym.Env):
         terminated = False
         truncated = self.time >= self.episode_length
 
-        if (not self.training) and (self.render_mode in ("human", "rgb_array")):
+        if self._should_render():
             self._ensure_pygame()
             self._draw(y_true=y_true, y_pred=self.y_pred, sensitivity_factor=sensitivity_factor)
             self._present()
@@ -114,6 +123,9 @@ class SineEnv(gym.Env):
 
         x = int(self.time % self.width)
         y_center = self.height // 2
+
+        if x == 0:
+            self._clear()
 
         y_true_px = int(y_center - y_true)
         y_pred_px = int(y_center - y_pred)

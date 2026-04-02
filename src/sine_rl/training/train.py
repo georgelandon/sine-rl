@@ -21,6 +21,13 @@ def configure_parser(parser: argparse.ArgumentParser) -> argparse.ArgumentParser
     parser.add_argument("--total-timesteps", type=int, default=1_000_000)
     parser.add_argument("--episode-length", type=int, default=600)
     parser.add_argument("--stacks", type=int, default=8)
+    parser.add_argument(
+        "--render",
+        type=str,
+        default="none",
+        choices=["none", "human"],
+        help="Render the training environment live. This will slow training down.",
+    )
 
     parser.add_argument("--learning-rate", type=float, default=1e-4)
     parser.add_argument("--n-steps", type=int, default=256)
@@ -37,19 +44,21 @@ def run(args: argparse.Namespace) -> int:
     import torch.nn as nn
     from stable_baselines3 import PPO
 
-    from sine_rl.utils.callbacks import make_eval_callback
+    from sine_rl.training.callbacks import make_eval_callback
 
     train_log_dir = os.path.join(args.runs_dir, "train")
     eval_log_dir = os.path.join(args.runs_dir, "eval")
     os.makedirs(train_log_dir, exist_ok=True)
     os.makedirs(eval_log_dir, exist_ok=True)
 
+    train_render_mode = None if args.render == "none" else args.render
+
     env = build_vec_env(
         args.episode_length,
         training=True,
         log_dir=train_log_dir,
         stacks=args.stacks,
-        render_mode=None,
+        render_mode=train_render_mode,
     )
     env_eval = build_vec_env(
         args.episode_length,

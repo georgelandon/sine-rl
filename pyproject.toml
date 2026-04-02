@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sine-rl"
+version = "0.1.0"
+description = "PPO training and evaluation utilities for a sine-wave tracking environment."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "gymnasium>=0.29.0",
+    "numpy>=1.23",
+    "pygame>=2.5",
+    "matplotlib>=3.7",
+    "stable-baselines3>=2.3.0",
+    "torch>=2.0",
+]
+
+[project.scripts]
+sine-rl-train = "sine_rl.training.train:main"
+sine-rl-eval = "sine_rl.training.evaluate:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

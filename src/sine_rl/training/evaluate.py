@@ -29,8 +29,8 @@ def run(args: argparse.Namespace) -> int:
     from stable_baselines3 import PPO
     from stable_baselines3.common.vec_env import DummyVecEnv, VecFrameStack, VecMonitor
 
+    from sine_rl.analysis.plotting import plot_eval_results
     from sine_rl.envs.sine_env import SineEnv
-    from sine_rl.utils.plotting import plot_eval_results
 
     eval_log_dir = args.eval_log_dir or os.path.join(args.runs_dir, "eval")
     model_path = args.model_path or os.path.join(eval_log_dir, "best_model.zip")
