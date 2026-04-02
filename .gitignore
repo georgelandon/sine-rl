@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.venv/
+.vscode/
+.idea/
+
+runs/
+tmp_train/
+tmp_eval/
+*.zip
+*.png
+*.log
+.DS_Store
