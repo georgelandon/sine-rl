@@ -20,6 +20,7 @@ dependencies = [
 [project.scripts]
 sine-rl-train = "sine_rl.training.train:main"
 sine-rl-eval = "sine_rl.training.evaluate:main"
+sine-rl-test = "sine_rl.testing.test:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

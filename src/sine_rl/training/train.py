@@ -18,30 +18,47 @@ def build_vec_env(episode_length: int, training: bool, log_dir: str, stacks: int
     return env
 
 def configure_parser(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
-    parser.add_argument("--total-timesteps", type=int, default=1_000_000)
+    parser.add_argument(
+        "--total-timesteps",
+        "--train-steps",
+        dest="total_timesteps",
+        type=int,
+        default=100_000_000,
+        help="Total environment steps for the full training run. Matches the original reference by default.",
+    )
     parser.add_argument("--episode-length", type=int, default=600)
     parser.add_argument("--stacks", type=int, default=8)
-    parser.add_argument(
-        "--render",
-        type=str,
-        default="none",
-        choices=["none", "human"],
-        help="Render the training environment live. This will slow training down.",
-    )
 
     parser.add_argument("--learning-rate", type=float, default=1e-4)
-    parser.add_argument("--n-steps", type=int, default=256)
+    parser.add_argument(
+        "--n-steps",
+        type=int,
+        default=256,
+        help="PPO rollout length collected before each policy update. This is not the total training duration.",
+    )
     parser.add_argument("--batch-size", type=int, default=64)
 
     parser.add_argument("--eval-freq", type=int, default=512 * 100)
     parser.add_argument("--n-eval-episodes", type=int, default=20)
     parser.add_argument("--max-no-improvement-evals", type=int, default=10)
+    parser.add_argument(
+        "--eval-render",
+        type=str,
+        default="none",
+        choices=["none", "human"],
+        help="After each scheduled eval (--eval-freq), run one rendered test rollout with the current policy.",
+    )
+    parser.add_argument(
+        "--eval-render-steps",
+        type=int,
+        default=0,
+        help="Steps to render after each scheduled eval. Defaults to one full episode.",
+    )
 
     parser.add_argument("--runs-dir", type=str, default="runs")
     return parser
 
 def run(args: argparse.Namespace) -> int:
-    import torch.nn as nn
     from stable_baselines3 import PPO
 
     from sine_rl.training.callbacks import make_eval_callback
@@ -51,14 +68,12 @@ def run(args: argparse.Namespace) -> int:
     os.makedirs(train_log_dir, exist_ok=True)
     os.makedirs(eval_log_dir, exist_ok=True)
 
-    train_render_mode = None if args.render == "none" else args.render
-
     env = build_vec_env(
         args.episode_length,
         training=True,
         log_dir=train_log_dir,
         stacks=args.stacks,
-        render_mode=train_render_mode,
+        render_mode=None,
     )
     env_eval = build_vec_env(
         args.episode_length,
@@ -69,11 +84,6 @@ def run(args: argparse.Namespace) -> int:
     )
 
     try:
-        policy_kwargs = dict(
-            net_arch=[dict(pi=[256, 256], vf=[256, 256])],
-            activation_fn=nn.ReLU,
-        )
-
         model = PPO(
             "MlpPolicy",
             env,
@@ -82,7 +92,6 @@ def run(args: argparse.Namespace) -> int:
             batch_size=args.batch_size,
             stats_window_size=args.episode_length,
             learning_rate=args.learning_rate,
-            policy_kwargs=policy_kwargs,
         )
 
         eval_cb = make_eval_callback(
@@ -91,6 +100,10 @@ def run(args: argparse.Namespace) -> int:
             eval_freq=args.eval_freq,
             n_eval_episodes=args.n_eval_episodes,
             max_no_improvement_evals=args.max_no_improvement_evals,
+            render_mode=None if args.eval_render == "none" else args.eval_render,
+            render_rollout_steps=args.eval_render_steps,
+            episode_length=args.episode_length,
+            stacks=args.stacks,
         )
 
         model.learn(total_timesteps=args.total_timesteps, callback=[eval_cb])
